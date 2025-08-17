@@ -5,6 +5,8 @@ mod error;
 pub use error::{LexError, LexErrorKind};
 mod span;
 pub use span::LineMap;
+mod iter;
+pub use iter::{tokenize_iter, Tokens};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenKind {
