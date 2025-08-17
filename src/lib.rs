@@ -153,11 +153,29 @@ impl<'a> Lexer<'a> {
     fn lex_number(&mut self, start: usize) -> Result<Token, LexError> {
         let mut seen_dot = false;
         let mut seen_exp = false;
-        self.bump();
+        let mut last_was_dot = false;
+        self.bump(); // consume first digit
+
         while let Some((idx, ch)) = self.peek() {
             if ch.is_ascii_digit() {
                 self.bump();
-            } else if ch == '.' && !seen_dot {
+                last_was_dot = false;
+            } else if ch == '.' {
+                if seen_dot {
+                    // If we just consumed a dot and see another dot, it's a range `..` -> stop number here
+                    if last_was_dot {
+                        break;
+                    }
+                    // Otherwise, this is a second dot in the same numeric literal -> invalid number
+                    return Err(LexError::new(
+                        LexErrorKind::InvalidNumber,
+                        Span {
+                            start,
+                            end: idx + ch.len_utf8(),
+                        },
+                    ));
+                }
+                // lookahead: do not consume if `..` or if no digit follows ("0.")
                 let mut clone = self.it.clone();
                 if let Some((_, next)) = clone.next() {
                     if next == '.' {
@@ -170,9 +188,11 @@ impl<'a> Lexer<'a> {
                     break;
                 }
                 seen_dot = true;
+                last_was_dot = true;
                 self.bump();
             } else if (ch == 'e' || ch == 'E') && !seen_exp {
                 seen_exp = true;
+                last_was_dot = false;
                 self.bump();
                 if let Some((_, sign)) = self.peek() {
                     if sign == '+' || sign == '-' {
@@ -188,13 +208,14 @@ impl<'a> Lexer<'a> {
                                 start,
                                 end: idx + ch.len_utf8(),
                             },
-                        ))
+                        ));
                     }
                 }
             } else {
                 break;
             }
         }
+
         let end = self.peek().map(|(j, _)| j).unwrap_or(self.src.len());
         Ok(Token {
             kind: TokenKind::Number(self.src[start..end].to_string()),
@@ -359,6 +380,38 @@ pub fn tokenize(src: &str) -> Result<Vec<Token>, LexError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn numbers_second_dot_invalid_unless_range() {
+        // second dot with digits on both sides -> invalid number
+        let err = tokenize("123.45.6").expect_err("second dot should be invalid unless range");
+        assert!(matches!(err.kind, LexErrorKind::InvalidNumber));
+
+        // but range `1..2` must remain split (we already check UnexpectedChar for the dot itself)
+        let err = tokenize("1..2").expect_err("range dot should not be consumed by number");
+        assert!(matches!(err.kind, LexErrorKind::UnexpectedChar));
+    }
+
+    #[test]
+    fn numbers_exponent_rules() {
+        // valid exponent forms
+        let toks = tokenize("1e10 1E+10 1.23e-4").unwrap();
+        assert!(toks
+            .iter()
+            .any(|t| matches!(t.kind, TokenKind::Number(ref s) if s == "1e10")));
+        assert!(toks
+            .iter()
+            .any(|t| matches!(t.kind, TokenKind::Number(ref s) if s == "1E+10")));
+        assert!(toks
+            .iter()
+            .any(|t| matches!(t.kind, TokenKind::Number(ref s) if s == "1.23e-4")));
+
+        // missing exponent digits is invalid
+        let err = tokenize("1e+").expect_err("missing exponent digits");
+        assert!(matches!(err.kind, LexErrorKind::InvalidNumber));
+
+        let err = tokenize("2E-").expect_err("missing exponent digits");
+        assert!(matches!(err.kind, LexErrorKind::InvalidNumber));
+    }
     #[test]
     fn basic() {
         let code = r#"
