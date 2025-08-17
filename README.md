@@ -20,6 +20,20 @@ Designed for speed, clarity, and easy embedding in parsers.
 
 ---
 
+## Spec
+
+| Aspect       | Rules |
+|--------------|------|
+| Identifiers  | ASCII: `[A-Za-z_][A-Za-z0-9_]*` |
+| Numbers      | Decimal integers/decimals; optional exponent `e|E[+|-]d+`. Single dot allowed once; `..` is **not** consumed by numbers. |
+| Strings      | Double-quoted. Escapes: `\n`, `\t`, `\r`, `\"`, `\\`. Unknown escapes = error. |
+| Comments     | `//` to end-of-line. |
+| Delimiters   | `(` `)` `{` `}` `[` `]` `,` `:` `;` |
+| Operators    | `=`, `+`, `-`, `*`, `/`, `->` |
+| Keywords     | `true`, `false`, `if`, `then`, `else`, `let`, `rule`, `and`, `or` |
+
+The enum `TokenKind`, types `Token`/`Span`, functions `tokenize`/`tokenize_iter`, `LineMap`, and error types `LexError{Kind}` are part of the **stable API**.
+
 ## Install
 
 Add to `Cargo.toml`:
