@@ -1,4 +1,4 @@
-# sentience-tokenize
+# Sentience-tokenize
 
 Tiny zero-dependency tokenizer for simple DSLs and config/query languages in Rust.  
 Generic: drop it into parsers, rule engines, interpreters, or build tooling.  
@@ -85,7 +85,7 @@ fn main() {
 }
 ```
 
-### Output (truncated):
+### Output (truncated)
 
 ```text
 Let @18..21
@@ -107,7 +107,7 @@ Ident("name") @50..54
 cargo test
 ```
 
-### Example binary:
+### Example binary
 
 ```sh
 cargo run --example basic
