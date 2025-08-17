@@ -1,6 +1,9 @@
 use std::iter::Peekable;
 use std::str::CharIndices;
 
+mod error;
+pub use error::{LexError, LexErrorKind};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenKind {
     Ident(String),
@@ -41,12 +44,6 @@ pub struct Span {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token {
     pub kind: TokenKind,
-    pub span: Span,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct LexError {
-    pub message: &'static str,
     pub span: Span,
 }
 
@@ -95,7 +92,6 @@ impl<'a> Lexer<'a> {
                         }
                         self.bump();
                     }
-                    progressed = true;
                     continue;
                 }
             }
@@ -134,21 +130,21 @@ impl<'a> Lexer<'a> {
                 let mut s = String::new();
                 loop {
                     let Some((j, ch)) = self.bump() else {
-                        return Err(LexError {
-                            message: "unterminated string",
-                            span: Span {
+                        return Err(LexError::new(
+                            LexErrorKind::UnterminatedString,
+                            Span {
                                 start,
                                 end: self.src.len(),
                             },
-                        });
+                        ));
                     };
                     match ch {
                         '\\' => {
                             let Some((_, esc)) = self.bump() else {
-                                return Err(LexError {
-                                    message: "unterminated escape",
-                                    span: Span { start, end: j + 1 },
-                                });
+                                return Err(LexError::new(
+                                    LexErrorKind::UnterminatedEscape,
+                                    Span { start, end: j + 1 },
+                                ));
                             };
                             s.push(match esc {
                                 'n' => '\n',
@@ -247,13 +243,13 @@ impl<'a> Lexer<'a> {
                 '*' => TokenKind::Star,
                 '/' => TokenKind::Slash,
                 other => {
-                    return Err(LexError {
-                        message: "unexpected char",
-                        span: Span {
+                    return Err(LexError::new(
+                        LexErrorKind::UnexpectedChar,
+                        Span {
                             start,
                             end: start + other.len_utf8(),
                         },
-                    })
+                    ))
                 }
             };
             out.push(Token {
