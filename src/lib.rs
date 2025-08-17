@@ -1,13 +1,40 @@
+//! sentience-tokenize — tiny zero-dep tokenizer for a simple DSL.
+//!
+//! ## Stable API surface (guaranteed across compatible releases)
+//! - `TokenKind`, `Token`, `Span`
+//! - `tokenize(&str) -> Result<Vec<Token>, LexError>`
+//! - `tokenize_iter(&str)` returning an iterator of `Result<Token, LexError>`
+//! - `LineMap` for byte→(line,col) mapping
+//! - `LexError` and `LexErrorKind`
+//!
+//! ## Versioning
+//! - Minor releases (`0.x.y` → `0.(x+1).0`) may add new token kinds behind minor bumps but will not break existing enum variants or fields.
+//! - Patch releases only fix bugs and do not change public types or behavior except to correct spec-conformant errors.
+//! - Any breaking change to the above surface will be accompanied by a semver-visible minor bump and noted in the changelog.
+//!
+//! ## Spec (summary)
+//! - **Identifiers**: `[A-Za-z_][A-Za-z0-9_]*`, ASCII only.
+//! - **Numbers**: decimal integers/decimals with optional exponent (`e|E[+|-]d+`). A single dot is allowed once; `..` is not consumed by numbers.
+//! - **Strings**: double-quoted with escapes `\n \t \r \" \\`. Unknown escapes are errors.
+//! - **Comments**: `//` to end-of-line.
+//! - **Delimiters**: `() { } [ ] , : ;`.
+//! - **Operators**: `= + - * / ->`.
+//! - **Keywords**: `true false if then else let rule and or`.
+
 use std::iter::Peekable;
 use std::str::CharIndices;
 
 mod error;
+/// Error type and categories returned by the lexer; stable across minor versions.
 pub use error::{LexError, LexErrorKind};
 mod span;
+/// Utility for mapping byte offsets to `(line, column)`; stable part of the public API.
 pub use span::LineMap;
 mod iter;
+/// Iterator-based API over tokens. Yields `Result<Token, LexError>`.
 pub use iter::{tokenize_iter, Tokens};
 
+/// Token kind for the DSL. Variant set is stable across minor releases; new variants may be added in minor versions.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenKind {
     Ident(String),
@@ -39,18 +66,21 @@ pub enum TokenKind {
     Slash,
 }
 
+/// Byte span `[start, end)` into the original source.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Span {
     pub start: usize,
     pub end: usize,
 }
 
+/// A token with its [`TokenKind`] and [`Span`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token {
     pub kind: TokenKind,
     pub span: Span,
 }
 
+/// Streaming lexer. Prefer [`tokenize`] / [`tokenize_iter`] unless you need manual control.
 pub struct Lexer<'a> {
     src: &'a str,
     it: Peekable<CharIndices<'a>>,
@@ -320,6 +350,8 @@ impl<'a> Lexer<'a> {
     }
 }
 
+/// Tokenize the entire input and return a vector of tokens.
+/// Errors include unterminated strings/escapes, invalid escapes, invalid numbers, and unexpected characters.
 pub fn tokenize(src: &str) -> Result<Vec<Token>, LexError> {
     Lexer::new(src).tokenize()
 }
