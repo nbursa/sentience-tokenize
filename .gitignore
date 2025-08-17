@@ -1,0 +1,10 @@
+# Rust build artefacts
+/target/
+**/*.rs.bk
+/Cargo.lock
+
+# Backup files
+.DS_Store
+Thumbs.db
+.vscode/
+*.log
