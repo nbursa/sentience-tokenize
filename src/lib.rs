@@ -3,6 +3,8 @@ use std::str::CharIndices;
 
 mod error;
 pub use error::{LexError, LexErrorKind};
+mod span;
+pub use span::LineMap;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenKind {
