@@ -5,6 +5,11 @@ edition = "2021"
 license = "MIT"
 description = "Tiny zero-dep tokenizer for a simple DSL (ident, number, string, parens, operators, keywords)."
 repository = "https://github.com/nbursa/sentience-tokenize"
+homepage = "https://github.com/nbursa/sentience-tokenize"
+readme = "README.md"
+keywords = ["lexer", "tokenizer", "dsl", "parsing", "rust"]
+categories = ["parsing", "text-processing"]
+documentation = "https://docs.rs/sentience-tokenize"
 
 [lib]
 name = "sentience_tokenize"
@@ -17,3 +22,5 @@ proptest = "1.5"
 [[bench]]
 name = "lex"
 harness = false
+
+include = ["src/**", "README.md", "LICENSE", "examples/**"]
