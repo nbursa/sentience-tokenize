@@ -6,8 +6,10 @@ Supports identifiers, numbers, strings, operators, and a small set of keywords.
 Designed for speed, clarity, and easy embedding.
 
 [![Crates.io](https://img.shields.io/crates/v/sentience-tokenize.svg)](https://crates.io/crates/sentience-tokenize)
-[![Docs](https://docs.rs/sentience-tokenize/badge.svg)](https://docs.rs/sentience-tokenize)
-[![CI](https://github.com/nbursa/sentience-tokenize/actions/workflows/ci.yml/badge.svg)](https://github.com/nbursa/sentience-tokenize/actions)
+[![Docs.rs](https://img.shields.io/docsrs/sentience-tokenize)](https://docs.rs/sentience-tokenize)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/nbursa/sentience-tokenize/rust.yml?branch=main)](https://github.com/nbursa/sentience-tokenize/actions)
+[![License](https://img.shields.io/crates/l/sentience-tokenize)](LICENSE)
+[![Coverage Status](https://img.shields.io/codecov/c/github/nbursa/sentience-tokenize/main.svg)](https://codecov.io/gh/nbursa/sentience-tokenize)
 
 ---
 
