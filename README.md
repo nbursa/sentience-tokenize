@@ -1,4 +1,4 @@
-# Sentience-tokenize
+# Sentience tokenizer
 
 Tiny zero-dependency tokenizer for simple DSLs and config/query languages in Rust.  
 Generic: drop it into parsers, rule engines, interpreters, or build tooling.  
