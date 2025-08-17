@@ -401,4 +401,97 @@ mod tests {
         let err = tokenize("\"\\x\"").unwrap_err();
         assert!(matches!(err.kind, LexErrorKind::InvalidEscape));
     }
+
+    #[test]
+    fn numbers_trailing_dot_is_error() {
+        let err = tokenize("0.").expect_err("trailing dot should error");
+        assert!(matches!(err.kind, LexErrorKind::UnexpectedChar));
+    }
+
+    #[test]
+    fn strings_empty_and_raw_newline_and_escapes() {
+        // empty string
+        let toks = tokenize("\"\"").unwrap();
+        assert!(matches!(toks[0].kind, TokenKind::String(ref s) if s.is_empty()));
+
+        // raw newline inside string is allowed by this lexer
+        let toks = tokenize("\"a\nb\"").unwrap();
+        assert!(matches!(toks[0].kind, TokenKind::String(ref s) if s == "a\nb"));
+
+        // complex escapes: quote, backslash, tab -> resulting string is "\t
+        let toks = tokenize("\"\\\"\\\\\t\"").unwrap();
+        assert!(matches!(toks[0].kind, TokenKind::String(ref s) if s == "\"\\\t"));
+    }
+
+    #[test]
+    fn strings_unterminated_and_unterminated_escape() {
+        // unterminated string
+        let err = tokenize("\"abc").expect_err("unterminated string");
+        assert!(matches!(err.kind, LexErrorKind::UnterminatedString));
+
+        // unterminated escape
+        let err = tokenize("\"abc\\").expect_err("unterminated escape");
+        assert!(matches!(err.kind, LexErrorKind::UnterminatedEscape));
+    }
+
+    #[test]
+    fn idents_and_keywords() {
+        let toks = tokenize("let letx _x1").unwrap();
+        assert!(matches!(toks[0].kind, TokenKind::Let));
+        assert!(matches!(toks[1].kind, TokenKind::Ident(ref s) if s == "letx"));
+        assert!(matches!(toks[2].kind, TokenKind::Ident(ref s) if s == "_x1"));
+    }
+
+    #[test]
+    fn comments_do_not_leak() {
+        let toks = tokenize("foo // comment\nbar").unwrap();
+        assert!(matches!(toks[0].kind, TokenKind::Ident(ref s) if s == "foo"));
+        assert!(matches!(toks[1].kind, TokenKind::Ident(ref s) if s == "bar"));
+        assert_eq!(toks.len(), 2);
+    }
+
+    #[test]
+    fn unknown_char_errors_with_span() {
+        let err = tokenize("a @ b").expect_err("unknown char '@'");
+        assert!(matches!(err.kind, LexErrorKind::UnexpectedChar));
+        assert!(err.span.start < err.span.end);
+    }
+
+    #[test]
+    fn golden_small_input() {
+        let src = "let rule f(x) = \"hi\" + x";
+        let toks = tokenize(src).unwrap();
+        use TokenKind::*;
+        let kinds: Vec<&'static str> = toks
+            .iter()
+            .map(|t| match &t.kind {
+                Let => "Let",
+                Rule => "Rule",
+                Ident(s) if s == "f" => "Ident(f)",
+                LParen => "LParen",
+                Ident(s) if s == "x" => "Ident(x)",
+                RParen => "RParen",
+                Eq => "Eq",
+                String(s) if s == "hi" => "String(hi)",
+                Plus => "Plus",
+                Ident(s) if s == "x" => "Ident(x)",
+                other => panic!("unexpected token in golden: {:?}", other),
+            })
+            .collect();
+        assert_eq!(
+            kinds,
+            vec![
+                "Let",
+                "Rule",
+                "Ident(f)",
+                "LParen",
+                "Ident(x)",
+                "RParen",
+                "Eq",
+                "String(hi)",
+                "Plus",
+                "Ident(x)"
+            ]
+        );
+    }
 }
