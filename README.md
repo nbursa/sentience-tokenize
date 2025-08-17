@@ -8,7 +8,7 @@ Designed for speed, clarity, and easy embedding.
 [![Crates.io](https://img.shields.io/crates/v/sentience-tokenize.svg)](https://crates.io/crates/sentience-tokenize)
 [![Docs.rs](https://img.shields.io/docsrs/sentience-tokenize)](https://docs.rs/sentience-tokenize)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/nbursa/sentience-tokenize/ci.yml?branch=main)](https://github.com/nbursa/sentience-tokenize/actions)
-[![License](https://img.shields.io/github/license/nbursa/sentience-tokenize)](LICENSE)
+[![License](https://img.shields.io/github/license/nbursa/sentience-tokenizer)](https://github.com/nbursa/sentience-tokenize/blob/main/LICENSE)
 [![Coverage Status](https://img.shields.io/codecov/c/github/nbursa/sentience-tokenize/main.svg)](https://codecov.io/gh/nbursa/sentience-tokenize)
 
 ---
