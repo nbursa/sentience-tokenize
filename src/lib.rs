@@ -120,6 +120,58 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    fn lex_number(&mut self, start: usize) -> Result<Token, LexError> {
+        let mut seen_dot = false;
+        let mut seen_exp = false;
+        self.bump();
+        while let Some((idx, ch)) = self.peek() {
+            if ch.is_ascii_digit() {
+                self.bump();
+            } else if ch == '.' && !seen_dot {
+                let mut clone = self.it.clone();
+                if let Some((_, next)) = clone.next() {
+                    if next == '.' {
+                        break;
+                    }
+                    if !next.is_ascii_digit() {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+                seen_dot = true;
+                self.bump();
+            } else if (ch == 'e' || ch == 'E') && !seen_exp {
+                seen_exp = true;
+                self.bump();
+                if let Some((_, sign)) = self.peek() {
+                    if sign == '+' || sign == '-' {
+                        self.bump();
+                    }
+                }
+                match self.peek() {
+                    Some((_, d)) if d.is_ascii_digit() => {}
+                    _ => {
+                        return Err(LexError::new(
+                            LexErrorKind::InvalidNumber,
+                            Span {
+                                start,
+                                end: idx + ch.len_utf8(),
+                            },
+                        ))
+                    }
+                }
+            } else {
+                break;
+            }
+        }
+        let end = self.peek().map(|(j, _)| j).unwrap_or(self.src.len());
+        Ok(Token {
+            kind: TokenKind::Number(self.src[start..end].to_string()),
+            span: Span { start, end },
+        })
+    }
+
     pub fn tokenize(mut self) -> Result<Vec<Token>, LexError> {
         let mut out = Vec::new();
         loop {
@@ -150,14 +202,24 @@ impl<'a> Lexer<'a> {
                                     Span { start, end: j + 1 },
                                 ));
                             };
-                            s.push(match esc {
+                            let ch = match esc {
                                 'n' => '\n',
                                 't' => '\t',
                                 'r' => '\r',
                                 '"' => '"',
                                 '\\' => '\\',
-                                other => other,
-                            });
+                                _ => {
+                                    // invalid escape
+                                    return Err(LexError::new(
+                                        LexErrorKind::InvalidEscape,
+                                        Span {
+                                            start,
+                                            end: self.src.len(),
+                                        },
+                                    ));
+                                }
+                            };
+                            s.push(ch);
                         }
                         '"' => {
                             out.push(Token {
@@ -173,20 +235,10 @@ impl<'a> Lexer<'a> {
             }
 
             if c.is_ascii_digit() {
-                let start = i;
-                self.bump();
-                while let Some((_, p)) = self.peek() {
-                    if p.is_ascii_digit() || p == '.' {
-                        self.bump();
-                    } else {
-                        break;
-                    }
+                match self.lex_number(i) {
+                    Ok(tok) => out.push(tok),
+                    Err(e) => return Err(e),
                 }
-                let end = self.peek().map(|(j, _)| j).unwrap_or(self.src.len());
-                out.push(Token {
-                    kind: TokenKind::Number(self.src[start..end].to_string()),
-                    span: Span { start, end },
-                });
                 continue;
             }
 
@@ -286,5 +338,35 @@ mod tests {
         assert!(toks.iter().any(|t| matches!(t.kind, TokenKind::Let)));
         assert!(toks.iter().any(|t| matches!(t.kind, TokenKind::Rule)));
         assert!(toks.iter().any(|t| matches!(t.kind, TokenKind::String(_))));
+    }
+
+    #[test]
+    fn numbers_and_ranges() {
+        // valid decimals and exponents
+        let toks = tokenize("1 1.0 1.2e-3").unwrap();
+        assert!(toks
+            .iter()
+            .any(|t| matches!(t.kind, TokenKind::Number(ref s) if s == "1")));
+        assert!(toks
+            .iter()
+            .any(|t| matches!(t.kind, TokenKind::Number(ref s) if s == "1.0")));
+        assert!(toks
+            .iter()
+            .any(|t| matches!(t.kind, TokenKind::Number(ref s) if s == "1.2e-3")));
+
+        // ensure don't swallow `..` as part of a number
+        let err = tokenize("1..2").expect_err("should error on unexpected '.'");
+        assert!(matches!(err.kind, LexErrorKind::UnexpectedChar));
+    }
+
+    #[test]
+    fn string_escapes() {
+        // valid escapes
+        let toks = tokenize("\"a\\n\\t\\r\\\\\\\"\"").unwrap();
+        assert!(matches!(toks[0].kind, TokenKind::String(_)));
+
+        // invalid escape
+        let err = tokenize("\"\\x\"").unwrap_err();
+        assert!(matches!(err.kind, LexErrorKind::InvalidEscape));
     }
 }
