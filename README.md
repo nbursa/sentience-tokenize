@@ -35,6 +35,26 @@ Designed for speed, clarity, and easy embedding.
 
 The enum `TokenKind`, types `Token`/`Span`, functions `tokenize`/`tokenize_iter`, `LineMap`, and error types `LexError{Kind}` are part of the **stable API**.
 
+## Error Reporting
+
+Lexing errors return a `LexError` with kind and span. Example with `LineMap`:
+
+```rust
+use sentience_tokenize::{tokenize, LineMap};
+
+let src = "\"abc\\x\"";
+let map = LineMap::new(src);
+let err = tokenize(src).unwrap_err();
+let (line, col) = map.to_line_col(err.span.start);
+println!("{}:{}: {}", line, col, err.kind.as_str());
+```
+
+### Output
+
+```sh
+1:5: invalid escape sequence
+```
+
 ## Stable API surface
 
 - Types: `TokenKind`, `Token`, `Span`
@@ -111,6 +131,8 @@ cargo test
 
 ```sh
 cargo run --example basic
+cargo run --example pretty
+echo 'let rule greet(n) = "hi, " + n' | cargo run --example stream
 ```
 
 ## Why?
