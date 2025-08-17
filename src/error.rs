@@ -22,6 +22,18 @@ impl LexError {
     }
 }
 
+impl LexErrorKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            LexErrorKind::UnexpectedChar => "unexpected character",
+            LexErrorKind::UnterminatedString => "unterminated string",
+            LexErrorKind::UnterminatedEscape => "unterminated escape",
+            LexErrorKind::InvalidNumber => "invalid number",
+            LexErrorKind::InvalidEscape => "invalid escape sequence",
+        }
+    }
+}
+
 impl fmt::Display for LexError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let msg = match self.kind {
