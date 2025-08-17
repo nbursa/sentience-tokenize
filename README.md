@@ -5,6 +5,8 @@ Generic: drop it into parsers, rule engines, interpreters, or build tooling.
 Supports identifiers, numbers, strings, operators, and a small set of keywords.  
 Designed for speed, clarity, and easy embedding.
 
+<https://crates.io/crates/sentience-tokenize>
+
 [![Crates.io](https://img.shields.io/crates/v/sentience-tokenize.svg)](https://crates.io/crates/sentience-tokenize)
 [![Docs.rs](https://img.shields.io/docsrs/sentience-tokenize)](https://docs.rs/sentience-tokenize)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/nbursa/sentience-tokenize/ci.yml?branch=main)](https://github.com/nbursa/sentience-tokenize/actions)
