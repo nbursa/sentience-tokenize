@@ -6,6 +6,8 @@ pub enum LexErrorKind {
     UnexpectedChar,
     UnterminatedString,
     UnterminatedEscape,
+    InvalidNumber,
+    InvalidEscape,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -26,6 +28,8 @@ impl fmt::Display for LexError {
             LexErrorKind::UnexpectedChar => "unexpected char",
             LexErrorKind::UnterminatedString => "unterminated string",
             LexErrorKind::UnterminatedEscape => "unterminated escape",
+            LexErrorKind::InvalidNumber => "invalid number",
+            LexErrorKind::InvalidEscape => "invalid escape",
         };
         write!(f, "{} at {}..{}", msg, self.span.start, self.span.end)
     }
