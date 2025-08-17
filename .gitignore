@@ -3,6 +3,12 @@
 **/*.rs.bk
 /Cargo.lock
 
+# Fuzz & bench artifacts
+/fuzz/target/
+/fuzz/corpus/
+/fuzz/artifacts/
+/benches/target/
+
 # Backup files
 .DS_Store
 Thumbs.db

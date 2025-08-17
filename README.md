@@ -137,6 +137,25 @@ cargo run --example pretty
 echo 'let rule greet(n) = "hi, " + n' | cargo run --example stream
 ```
 
+## Dev
+
+### Benchmark
+
+```sh
+cargo bench
+```
+
+### Fuzzing
+
+Includes a cargo-fuzz setup.
+
+```sh
+cargo bench
+cargo test
+cargo install cargo-fuzz
+cargo fuzz run tokenize -- -runs=1000
+```
+
 ## Why?
 
 - Small, standalone lexer - no macros, no regexes.

@@ -1,0 +1,18 @@
+[package]
+name = "sentience-tokenize-fuzz"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[package.metadata]
+fuzz = true
+
+[dependencies]
+libfuzzer-sys = { version = "0.4", features = ["arbitrary-derive"] }
+
+[dependencies.sentience-tokenize]
+path = ".."
+
+[[bin]]
+name = "tokenize"
+path = "fuzz_targets/tokenize.rs"
