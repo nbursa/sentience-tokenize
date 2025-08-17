@@ -1,8 +1,9 @@
 # sentience-tokenize
 
-Tiny zero-dependency tokenizer for a simple DSL.  
+Tiny zero-dependency tokenizer for simple DSLs and config/query languages in Rust.  
+Generic: drop it into parsers, rule engines, interpreters, or build tooling.  
 Supports identifiers, numbers, strings, operators, and a small set of keywords.  
-Designed for speed, clarity, and easy embedding in parsers.
+Designed for speed, clarity, and easy embedding.
 
 [![Crates.io](https://img.shields.io/crates/v/sentience-tokenize.svg)](https://crates.io/crates/sentience-tokenize)
 [![Docs](https://docs.rs/sentience-tokenize/badge.svg)](https://docs.rs/sentience-tokenize)
@@ -25,7 +26,7 @@ Designed for speed, clarity, and easy embedding in parsers.
 | Aspect       | Rules |
 |--------------|------|
 | Identifiers  | ASCII: `[A-Za-z_][A-Za-z0-9_]*` |
-| Numbers      | Decimal integers/decimals; optional exponent `e|E[+|-]d+`. Single dot allowed once; `..` is **not** consumed by numbers. |
+| Numbers      | Decimal integers/decimals; optional exponent `e\|E[+\-]d+`. Single dot allowed once; `..` is **not** consumed by numbers. |
 | Strings      | Double-quoted. Escapes: `\n`, `\t`, `\r`, `\"`, `\\`. Unknown escapes = error. |
 | Comments     | `//` to end-of-line. |
 | Delimiters   | `(` `)` `{` `}` `[` `]` `,` `:` `;` |
@@ -33,6 +34,28 @@ Designed for speed, clarity, and easy embedding in parsers.
 | Keywords     | `true`, `false`, `if`, `then`, `else`, `let`, `rule`, `and`, `or` |
 
 The enum `TokenKind`, types `Token`/`Span`, functions `tokenize`/`tokenize_iter`, `LineMap`, and error types `LexError{Kind}` are part of the **stable API**.
+
+## Stable API surface
+
+- Types: `TokenKind`, `Token`, `Span`
+- Functions: `tokenize(&str) -> Result<Vec<Token>, LexError>`, `tokenize_iter(&str)`
+- Utilities: `LineMap` for byte→(line, col)
+- Errors: `LexError`, `LexErrorKind`
+
+### Iterator API example
+
+```rust
+use sentience_tokenize::{tokenize_iter, TokenKind};
+
+fn main() {
+    for tok in tokenize_iter("let x = 1.2e-3") {
+        let t = tok.unwrap();
+        if let TokenKind::Ident(name) = &t.kind {
+            println!("ident: {} @{}..{}", name, t.span.start, t.span.end);
+        }
+    }
+}
+```
 
 ## Install
 
