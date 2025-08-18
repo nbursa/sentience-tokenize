@@ -8,14 +8,15 @@
 //! - `LexError` and `LexErrorKind`
 //!
 //! ## Versioning
-//! - Minor releases (`0.x.y` → `0.(x+1).0`) may add new token kinds behind minor bumps but will not break existing enum variants or fields.
-//! - Patch releases only fix bugs and do not change public types or behavior except to correct spec-conformant errors.
-//! - Any breaking change to the above surface will be accompanied by a semver-visible minor bump and noted in the changelog.
+//! - Patch releases fix bugs only; no public API changes.
+//! - Minor releases (`0.x.y` → `0.(x+1).0`) may add new `TokenKind` variants or utilities without removing existing ones.
+//!   Downstream code should avoid exhaustive `match` over `TokenKind`; prefer a `_` catch-all to remain forward-compatible.
+//! - Any removal or change of existing public types/fields will be treated as a breaking change and called out explicitly.
 //!
 //! ## Spec (summary)
 //! - **Identifiers**: `[A-Za-z_][A-Za-z0-9_]*`, ASCII only.
 //! - **Numbers**: decimal integers/decimals with optional exponent (`e|E[+|-]d+`). A single dot is allowed once; `..` is not consumed by numbers.
-//! - **Strings**: double-quoted with escapes `\n \t \r \" \\`. Unknown escapes are errors.
+//! - **Strings**: double-quoted with escapes `\n \t \r \" \\`. Raw newlines are accepted. Unknown escapes are errors.
 //! - **Comments**: `//` to end-of-line.
 //! - **Delimiters**: `() { } [ ] , : ;`.
 //! - **Operators**: `= + - * / ->`.
@@ -380,6 +381,51 @@ pub fn tokenize(src: &str) -> Result<Vec<Token>, LexError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn error_kind_as_str_and_display_messages() {
+        use super::{LexError, LexErrorKind, Span};
+        let span = Span { start: 1, end: 3 };
+        let cases: &[(LexErrorKind, &str, &str)] = &[
+            (
+                LexErrorKind::UnexpectedChar,
+                "unexpected character",
+                "unexpected char",
+            ),
+            (
+                LexErrorKind::UnterminatedString,
+                "unterminated string",
+                "unterminated string",
+            ),
+            (
+                LexErrorKind::UnterminatedEscape,
+                "unterminated escape",
+                "unterminated escape",
+            ),
+            (
+                LexErrorKind::InvalidNumber,
+                "invalid number",
+                "invalid number",
+            ),
+            (
+                LexErrorKind::InvalidEscape,
+                "invalid escape sequence",
+                "invalid escape",
+            ),
+        ];
+
+        for (kind, as_str_msg, display_msg) in cases.iter().cloned() {
+            assert_eq!(kind.as_str(), as_str_msg);
+            let err = LexError::new(kind, span);
+            let rendered = format!("{}", err);
+            assert_eq!(
+                rendered,
+                format!("{} at {}..{}", display_msg, span.start, span.end)
+            );
+            let _e: &dyn std::error::Error = &err;
+            let _dbg = format!("{:?}", err.clone());
+            assert!(!_dbg.is_empty());
+        }
+    }
     #[test]
     fn numbers_second_dot_invalid_unless_range() {
         // second dot with digits on both sides -> invalid number

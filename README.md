@@ -19,6 +19,7 @@ Designed for speed, clarity, and easy embedding.
 - **Token kinds**: identifiers, numbers, strings, parens/brackets/braces, `= + - * / ->`.
 - **Keywords**: `true false if then else let rule and or`.
 - **Spans** included for each token.
+- **Iterator API**: `tokenize_iter` yields `Result<Token, LexError>`.
 - **Whitespace & // comments** skipped.
 
 ---
@@ -29,13 +30,15 @@ Designed for speed, clarity, and easy embedding.
 |--------------|------|
 | Identifiers  | ASCII: `[A-Za-z_][A-Za-z0-9_]*` |
 | Numbers      | Decimal integers/decimals; optional exponent `e\|E[+\-]d+`. Single dot allowed once; `..` is **not** consumed by numbers. |
-| Strings      | Double-quoted. Escapes: `\n`, `\t`, `\r`, `\"`, `\\`. Unknown escapes = error. |
+| Strings      | Double-quoted. Escapes: `\n`, `\t`, `\r`, `\"`, `\\`. Unknown escapes = error. Raw newlines are accepted. |
 | Comments     | `//` to end-of-line. |
 | Delimiters   | `(` `)` `{` `}` `[` `]` `,` `:` `;` |
 | Operators    | `=`, `+`, `-`, `*`, `/`, `->` |
 | Keywords     | `true`, `false`, `if`, `then`, `else`, `let`, `rule`, `and`, `or` |
 
 The enum `TokenKind`, types `Token`/`Span`, functions `tokenize`/`tokenize_iter`, `LineMap`, and error types `LexError{Kind}` are part of the **stable API**.
+
+Note: new `TokenKind` variants may be added in minor releases; avoid exhaustive `match` without a `_` catch-all.
 
 ## Error Reporting
 
@@ -147,7 +150,8 @@ cargo bench
 
 ### Fuzzing
 
-Includes a cargo-fuzz setup.
+Fuzzing is supported via
+`cargo-fuzz` (optional).
 
 ```sh
 cargo bench
