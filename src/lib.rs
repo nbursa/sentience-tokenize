@@ -230,10 +230,7 @@ impl<'a> Lexer<'a> {
     #[inline]
     pub(crate) fn next_token(&mut self) -> Option<Result<Token, LexError>> {
         self.skip_ws_and_comments();
-        let (i, c) = match self.peek() {
-            Some(t) => t,
-            None => return None,
-        };
+        let (i, c) = self.peek()?;
 
         // Strings
         if c == '"' {

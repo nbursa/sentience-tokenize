@@ -13,7 +13,6 @@ enum TokensInner<'a> {
     Done,
 }
 
-#[must_use]
 pub fn tokenize_iter(src: &str) -> Tokens<'_> {
     Tokens {
         inner: TokensInner::Lex(Lexer::new(src)),
