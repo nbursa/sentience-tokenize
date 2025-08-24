@@ -82,6 +82,7 @@ pub struct Token {
 }
 
 /// Streaming lexer. Prefer [`tokenize`] / [`tokenize_iter`] unless you need manual control.
+#[derive(Debug)]
 pub struct Lexer<'a> {
     src: &'a str,
     it: Peekable<CharIndices<'a>>,
@@ -224,155 +225,164 @@ impl<'a> Lexer<'a> {
         })
     }
 
-    pub fn tokenize(mut self) -> Result<Vec<Token>, LexError> {
-        let mut out = Vec::new();
-        loop {
-            self.skip_ws_and_comments();
-            let Some((i, c)) = self.peek() else {
-                break;
-            };
+    /// Return next token or error without buffering the entire input.
+    /// `None` means end.
+    #[inline]
+    pub(crate) fn next_token(&mut self) -> Option<Result<Token, LexError>> {
+        self.skip_ws_and_comments();
+        let (i, c) = match self.peek() {
+            Some(t) => t,
+            None => return None,
+        };
 
-            if c == '"' {
-                let start = i;
-                self.bump();
-                let mut s = String::new();
-                loop {
-                    let Some((j, ch)) = self.bump() else {
-                        return Err(LexError::new(
-                            LexErrorKind::UnterminatedString,
-                            Span {
-                                start,
-                                end: self.src.len(),
-                            },
-                        ));
-                    };
-                    match ch {
-                        '\\' => {
-                            // Backslash inside a string; the next character determines the escape.
-                            let Some((k, esc)) = self.bump() else {
-                                // Backslash at position `j` with no following character.
-                                return Err(LexError::new(
-                                    LexErrorKind::UnterminatedEscape,
-                                    Span {
-                                        start: j,
-                                        end: j + 1,
-                                    },
-                                ));
-                            };
-                            let ch = match esc {
-                                'n' => '\n',
-                                't' => '\t',
-                                'r' => '\r',
-                                '"' => '"',
-                                '\\' => '\\',
-                                _ => {
-                                    // Report a precise span covering just the escape sequence `\\X`.
-                                    let escape_end = k + esc.len_utf8();
-                                    return Err(LexError::new(
-                                        LexErrorKind::InvalidEscape,
-                                        Span {
-                                            start: j,
-                                            end: escape_end,
-                                        },
-                                    ));
-                                }
-                            };
-                            s.push(ch);
-                        }
-                        '"' => {
-                            out.push(Token {
-                                kind: TokenKind::String(s),
-                                span: Span { start, end: j + 1 },
-                            });
-                            break;
-                        }
-                        _ => s.push(ch),
-                    }
-                }
-                continue;
-            }
-
-            if c.is_ascii_digit() {
-                match self.lex_number(i) {
-                    Ok(tok) => out.push(tok),
-                    Err(e) => return Err(e),
-                }
-                continue;
-            }
-
-            if c.is_ascii_alphabetic() || c == '_' {
-                let start = i;
-                self.bump();
-                while let Some((_, p)) = self.peek() {
-                    if p.is_ascii_alphanumeric() || p == '_' {
-                        self.bump();
-                    } else {
-                        break;
-                    }
-                }
-                let end = self.peek().map(|(j, _)| j).unwrap_or(self.src.len());
-                let kind = Self::kw_or_ident(&self.src[start..end]);
-                out.push(Token {
-                    kind,
-                    span: Span { start, end },
-                });
-                continue;
-            }
-
-            if c == '-' {
-                let start = i;
-                self.bump();
-                if let Some((j, '>')) = self.peek() {
-                    self.bump();
-                    out.push(Token {
-                        kind: TokenKind::Arrow,
-                        span: Span { start, end: j + 1 },
-                    });
-                } else {
-                    out.push(Token {
-                        kind: TokenKind::Minus,
-                        span: Span {
-                            start,
-                            end: start + 1,
-                        },
-                    });
-                }
-                continue;
-            }
-
+        // Strings
+        if c == '"' {
             let start = i;
             self.bump();
-            let tk = match c {
-                '(' => TokenKind::LParen,
-                ')' => TokenKind::RParen,
-                '{' => TokenKind::LBrace,
-                '}' => TokenKind::RBrace,
-                '[' => TokenKind::LBracket,
-                ']' => TokenKind::RBracket,
-                ',' => TokenKind::Comma,
-                ':' => TokenKind::Colon,
-                ';' => TokenKind::Semicolon,
-                '=' => TokenKind::Eq,
-                '+' => TokenKind::Plus,
-                '*' => TokenKind::Star,
-                '/' => TokenKind::Slash,
-                other => {
-                    return Err(LexError::new(
-                        LexErrorKind::UnexpectedChar,
+            let mut s = String::new();
+            loop {
+                let Some((j, ch)) = self.bump() else {
+                    return Some(Err(LexError::new(
+                        LexErrorKind::UnterminatedString,
                         Span {
                             start,
-                            end: start + other.len_utf8(),
+                            end: self.src.len(),
                         },
-                    ))
+                    )));
+                };
+                match ch {
+                    '\\' => {
+                        // precizan span za escape sekvence
+                        let Some((k, esc)) = self.bump() else {
+                            return Some(Err(LexError::new(
+                                LexErrorKind::UnterminatedEscape,
+                                Span {
+                                    start: j,
+                                    end: j + 1,
+                                },
+                            )));
+                        };
+                        let ch = match esc {
+                            'n' => '\n',
+                            't' => '\t',
+                            'r' => '\r',
+                            '"' => '"',
+                            '\\' => '\\',
+                            _ => {
+                                let escape_end = k + esc.len_utf8();
+                                return Some(Err(LexError::new(
+                                    LexErrorKind::InvalidEscape,
+                                    Span {
+                                        start: j,
+                                        end: escape_end,
+                                    },
+                                )));
+                            }
+                        };
+                        s.push(ch);
+                    }
+                    '"' => {
+                        return Some(Ok(Token {
+                            kind: TokenKind::String(s),
+                            span: Span { start, end: j + 1 },
+                        }));
+                    }
+                    _ => s.push(ch),
                 }
-            };
-            out.push(Token {
-                kind: tk,
-                span: Span {
-                    start,
-                    end: start + 1,
-                },
-            });
+            }
+        }
+
+        // Numbers
+        if c.is_ascii_digit() {
+            match self.lex_number(i) {
+                Ok(tok) => return Some(Ok(tok)),
+                Err(e) => return Some(Err(e)),
+            }
+        }
+
+        // Idents / keywords
+        if c.is_ascii_alphabetic() || c == '_' {
+            let start = i;
+            self.bump();
+            while let Some((_, p)) = self.peek() {
+                if p.is_ascii_alphanumeric() || p == '_' {
+                    self.bump();
+                } else {
+                    break;
+                }
+            }
+            let end = self.peek().map(|(j, _)| j).unwrap_or(self.src.len());
+            let kind = Self::kw_or_ident(&self.src[start..end]);
+            return Some(Ok(Token {
+                kind,
+                span: Span { start, end },
+            }));
+        }
+
+        // Arrow / minus
+        if c == '-' {
+            let start = i;
+            self.bump();
+            if let Some((j, '>')) = self.peek() {
+                self.bump();
+                return Some(Ok(Token {
+                    kind: TokenKind::Arrow,
+                    span: Span { start, end: j + 1 },
+                }));
+            } else {
+                return Some(Ok(Token {
+                    kind: TokenKind::Minus,
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
+                }));
+            }
+        }
+
+        // Singles / error
+        let start = i;
+        self.bump();
+        let tk = match c {
+            '(' => TokenKind::LParen,
+            ')' => TokenKind::RParen,
+            '{' => TokenKind::LBrace,
+            '}' => TokenKind::RBrace,
+            '[' => TokenKind::LBracket,
+            ']' => TokenKind::RBracket,
+            ',' => TokenKind::Comma,
+            ':' => TokenKind::Colon,
+            ';' => TokenKind::Semicolon,
+            '=' => TokenKind::Eq,
+            '+' => TokenKind::Plus,
+            '*' => TokenKind::Star,
+            '/' => TokenKind::Slash,
+            other => {
+                return Some(Err(LexError::new(
+                    LexErrorKind::UnexpectedChar,
+                    Span {
+                        start,
+                        end: start + other.len_utf8(),
+                    },
+                )));
+            }
+        };
+        Some(Ok(Token {
+            kind: tk,
+            span: Span {
+                start,
+                end: start + 1,
+            },
+        }))
+    }
+
+    pub fn tokenize(mut self) -> Result<Vec<Token>, LexError> {
+        let mut out = Vec::new();
+        while let Some(res) = self.next_token() {
+            match res {
+                Ok(tok) => out.push(tok),
+                Err(e) => return Err(e),
+            }
         }
         Ok(out)
     }
@@ -526,6 +536,25 @@ mod tests {
         // complex escapes: quote, backslash, tab -> resulting string is "\t
         let toks = tokenize("\"\\\"\\\\\t\"").unwrap();
         assert!(matches!(toks[0].kind, TokenKind::String(ref s) if s == "\"\\\t"));
+    }
+
+    #[test]
+    fn streaming_iterator_matches_tokenize_and_propagates_error() {
+        // identičan izlaz kao tokenize()
+        let src = "let x = 1 + 2\nrule r() = \"ok\"";
+        let vec_tokens = tokenize(src).unwrap();
+        let iter_tokens: Result<Vec<_>, _> = tokenize_iter(src).collect();
+        let iter_tokens = iter_tokens.unwrap();
+        assert_eq!(vec_tokens, iter_tokens);
+
+        // greška: invalid escape — prvi element je Err, posle toga iteracija se završava
+        let src_err = "\"abc\\x\" rest";
+        let mut it = tokenize_iter(src_err);
+        match it.next() {
+            Some(Err(e)) => assert!(matches!(e.kind, LexErrorKind::InvalidEscape)),
+            other => panic!("expected first item to be Err, got {:?}", other),
+        }
+        assert!(it.next().is_none(), "iterator should end after error");
     }
 
     #[test]

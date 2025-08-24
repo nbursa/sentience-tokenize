@@ -1,41 +1,48 @@
 use crate::error::LexError;
 use crate::{Lexer, Token};
 
-pub struct Tokens {
-    inner: TokensInner,
+#[must_use]
+#[derive(Debug)]
+pub struct Tokens<'a> {
+    inner: TokensInner<'a>,
 }
 
-enum TokensInner {
-    Items(std::vec::IntoIter<Token>),
-    Error(Option<LexError>),
+#[derive(Debug)]
+enum TokensInner<'a> {
+    Lex(Lexer<'a>),
+    Done,
 }
 
-pub fn tokenize_iter(src: &str) -> Tokens {
-    match Lexer::new(src).tokenize() {
-        Ok(v) => Tokens {
-            inner: TokensInner::Items(v.into_iter()),
-        },
-        Err(e) => Tokens {
-            inner: TokensInner::Error(Some(e)),
-        },
+#[must_use]
+pub fn tokenize_iter(src: &str) -> Tokens<'_> {
+    Tokens {
+        inner: TokensInner::Lex(Lexer::new(src)),
     }
 }
 
-impl Iterator for Tokens {
+impl<'a> Iterator for Tokens<'a> {
     type Item = Result<Token, LexError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match &mut self.inner {
-            TokensInner::Items(iter) => iter.next().map(Ok),
-            TokensInner::Error(e) => e.take().map(Err),
+            TokensInner::Lex(lex) => match lex.next_token() {
+                Some(Ok(tok)) => Some(Ok(tok)),
+                Some(Err(e)) => {
+                    // After an error, terminate the stream.
+                    self.inner = TokensInner::Done;
+                    Some(Err(e))
+                }
+                None => {
+                    self.inner = TokensInner::Done;
+                    None
+                }
+            },
+            TokensInner::Done => None,
         }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        match &self.inner {
-            TokensInner::Items(iter) => iter.size_hint(),
-            TokensInner::Error(Some(_)) => (1, Some(1)),
-            TokensInner::Error(None) => (0, Some(0)),
-        }
+        // Streaming: we don't know remaining size.
+        (0, None)
     }
 }
