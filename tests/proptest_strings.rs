@@ -2,7 +2,7 @@ use proptest::prelude::*;
 use sentience_tokenize::{tokenize, TokenKind};
 
 proptest! {
-    // Generiši stringove bez navodnika i backslash-a, pa proveri round-trip.
+    // Generate strings without quotes and backslashes, then check round-trip.
     #[test]
     fn string_round_trip_without_escapes(s in "[[:print:][:space:]]{0,64}") {
         let clean: String = s.chars().filter(|&ch| ch != '\"' && ch != '\\').collect();

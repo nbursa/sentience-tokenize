@@ -947,4 +947,120 @@ mod tests {
         use BorrowedTokenKind as K;
         assert!(matches!(toks[0].kind, K::String("a\\n")));
     }
+
+    // --- Extra coverage for borrowed API ---
+    #[test]
+    fn borrowed_operators_and_singles() {
+        use BorrowedTokenKind as K;
+        // covers: Arrow vs Minus, and all singles
+        let src = "()->{}[],:;=+ - * / ->";
+        let toks = tokenize_borrowed(src).unwrap();
+        let kinds: Vec<&'static str> = toks
+            .iter()
+            .map(|t| match t.kind {
+                K::LParen => "LParen",
+                K::RParen => "RParen",
+                K::Arrow => "Arrow",
+                K::LBrace => "LBrace",
+                K::RBrace => "RBrace",
+                K::LBracket => "LBracket",
+                K::RBracket => "RBracket",
+                K::Comma => "Comma",
+                K::Colon => "Colon",
+                K::Semicolon => "Semicolon",
+                K::Eq => "Eq",
+                K::Plus => "Plus",
+                K::Minus => "Minus",
+                K::Star => "Star",
+                K::Slash => "Slash",
+                _ => "Other",
+            })
+            .collect();
+        assert_eq!(
+            kinds,
+            vec![
+                "LParen",
+                "RParen",
+                "Arrow",
+                "LBrace",
+                "RBrace",
+                "LBracket",
+                "RBracket",
+                "Comma",
+                "Colon",
+                "Semicolon",
+                "Eq",
+                "Plus",
+                "Minus",
+                "Star",
+                "Slash",
+                "Arrow"
+            ]
+        );
+    }
+
+    #[test]
+    fn borrowed_keywords_and_idents() {
+        use BorrowedTokenKind as K;
+        let toks =
+            tokenize_borrowed("true false if then else let rule and or foo _bar a1").unwrap();
+        // Pick some spot checks
+        assert!(matches!(toks[0].kind, K::True));
+        assert!(matches!(toks[1].kind, K::False));
+        assert!(matches!(toks[2].kind, K::If));
+        assert!(matches!(toks[3].kind, K::Then));
+        assert!(matches!(toks[4].kind, K::Else));
+        assert!(matches!(toks[5].kind, K::Let));
+        assert!(matches!(toks[6].kind, K::Rule));
+        assert!(matches!(toks[7].kind, K::And));
+        assert!(matches!(toks[8].kind, K::Or));
+        assert!(matches!(toks[9].kind, K::Ident("foo")));
+        assert!(matches!(toks[10].kind, K::Ident("_bar")));
+        assert!(matches!(toks[11].kind, K::Ident("a1")));
+    }
+
+    #[test]
+    fn borrowed_comments_skipped() {
+        use BorrowedTokenKind as K;
+        let toks = tokenize_borrowed("foo // comment\nbar").unwrap();
+        assert!(matches!(toks[0].kind, K::Ident("foo")));
+        assert!(matches!(toks[1].kind, K::Ident("bar")));
+        assert_eq!(toks.len(), 2);
+    }
+
+    #[test]
+    fn borrowed_numbers_errors_and_valid() {
+        use BorrowedTokenKind as K;
+        // valid
+        let toks = tokenize_borrowed("1 1.0 1.2e-3").unwrap();
+        assert!(matches!(toks[0].kind, K::Number("1")));
+        assert!(matches!(toks[1].kind, K::Number("1.0")));
+        assert!(matches!(toks[2].kind, K::Number("1.2e-3")));
+        // invalid: second dot that's not a range
+        let err = tokenize_borrowed("123.45.6").expect_err("second dot invalid");
+        assert!(matches!(err.kind, LexErrorKind::InvalidNumber));
+        // invalid: exponent without digits
+        let err = tokenize_borrowed("1e+").expect_err("missing exponent digits");
+        assert!(matches!(err.kind, LexErrorKind::InvalidNumber));
+    }
+
+    #[test]
+    fn borrowed_string_errors() {
+        // invalid escape
+        let err = tokenize_borrowed("\"\\x\"").unwrap_err();
+        assert!(matches!(err.kind, LexErrorKind::InvalidEscape));
+        // unterminated string
+        let err = tokenize_borrowed("\"abc").unwrap_err();
+        assert!(matches!(err.kind, LexErrorKind::UnterminatedString));
+        // unterminated escape
+        let err = tokenize_borrowed("\"abc\\").unwrap_err();
+        assert!(matches!(err.kind, LexErrorKind::UnterminatedEscape));
+    }
+
+    #[test]
+    fn borrowed_unexpected_char_error() {
+        let err = tokenize_borrowed("a @ b").expect_err("unexpected '@'");
+        assert!(matches!(err.kind, LexErrorKind::UnexpectedChar));
+        assert!(err.span.start < err.span.end);
+    }
 }
