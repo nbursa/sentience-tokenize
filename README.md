@@ -69,6 +69,13 @@ assert!(matches!(toks[1].kind, BorrowedTokenKind::Number("123")));
 
 ---
 
+## Background
+
+For more context and design motivation, see my blog post:  
+[Designing a zero-dependency tokenizer in Rust](https://medium.com/p/44b7885d814d)
+
+---
+
 ## Optional features
 
 - `serde`: derive `Serialize`/`Deserialize` for tokens and errors
