@@ -20,7 +20,15 @@ Designed for speed, clarity, and easy embedding.
 - **Keywords**: `true false if then else let rule and or`.
 - **Spans** included for each token.
 - **Iterator API**: `tokenize_iter` yields `Result<Token, LexError>`.
+- **Zero-copy API**: `tokenize_borrowed` returns `BorrowedToken<'_>`/`BorrowedTokenKind<'_>` with `&str` slices.
 - **Whitespace & // comments** skipped.
+
+---
+
+## Optional features
+
+- `serde`: derive `Serialize`/`Deserialize` for tokens and errors
+- zero-copy API: `tokenize_borrowed` returns `BorrowedTokenKind<'a>`/`BorrowedToken<'a>` with `&str` slices (strings keep raw escapes)
 
 ---
 
@@ -62,8 +70,8 @@ println!("{}:{}: {}", line, col, err.kind.as_str());
 
 ## Stable API surface
 
-- Types: `TokenKind`, `Token`, `Span`
-- Functions: `tokenize(&str) -> Result<Vec<Token>, LexError>`, `tokenize_iter(&str)`
+- Types: `TokenKind`, `Token`, `Span`, `BorrowedTokenKind<'a>`, `BorrowedToken<'a>`
+- Functions: `tokenize(&str) -> Result<Vec<Token>, LexError>`, `tokenize_iter(&str)`, `tokenize_borrowed(&str) -> Result<Vec<BorrowedToken<'_>>, LexError>`
 - Utilities: `LineMap` for byte→(line, col)
 - Errors: `LexError`, `LexErrorKind`
 
@@ -82,13 +90,27 @@ fn main() {
 }
 ```
 
+### Zero-copy example
+
+```rust
+use sentience_tokenize::{tokenize_borrowed, BorrowedTokenKind};
+
+fn main() {
+    let toks = tokenize_borrowed("let x = \"hi\" 123").unwrap();
+    match toks[3].kind {
+        BorrowedTokenKind::String(s) => assert_eq!(s, "hi"),
+        _ => unreachable!(),
+    }
+}
+```
+
 ## Install
 
 Add to `Cargo.toml`:
 
 ```toml
 [dependencies]
-sentience-tokenize = "0.1"
+sentience-tokenize = "0.2.0"
 ```
 
 ## Example
