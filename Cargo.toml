@@ -10,6 +10,7 @@ readme = "README.md"
 keywords = ["lexer", "tokenizer", "dsl", "parsing", "rust"]
 categories = ["parsing", "text-processing"]
 documentation = "https://docs.rs/sentience-tokenize"
+rust-version = "1.81"
 
 include = ["src/**", "README.md", "LICENSE", "examples/**"]
 

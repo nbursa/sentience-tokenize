@@ -37,3 +37,11 @@ jobs:
         with:
           files: lcov.info
           fail_ci_if_error: false
+
+  rust-msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.81.0
+      - run: cargo build --all-features --verbose
+      - run: cargo test --all-features --verbose

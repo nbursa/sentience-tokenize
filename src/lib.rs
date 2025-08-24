@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 //! sentience-tokenize — tiny zero-dep tokenizer for a simple DSL.
 //!
 //! ## Stable API surface (guaranteed across compatible releases)
