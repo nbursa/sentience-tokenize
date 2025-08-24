@@ -1,8 +1,9 @@
 # Sentience tokenizer
 
-Tiny zero-dependency tokenizer for simple DSLs and config/query languages in Rust.  
+Tiny **zero‑dependency** tokenizer for simple DSLs and config/query languages in Rust.  
 Generic: drop it into parsers, rule engines, interpreters, or build tooling.  
 Supports identifiers, numbers, strings, operators, and a small set of keywords.  
+Clear spans, a streaming iterator, and a **zero‑copy** mode when you want pure speed.
 Designed for speed, clarity, and easy embedding.
 
 [![Crates.io](https://img.shields.io/crates/v/sentience-tokenize.svg)](https://crates.io/crates/sentience-tokenize)
@@ -12,6 +13,47 @@ Designed for speed, clarity, and easy embedding.
 [![codecov](https://codecov.io/gh/nbursa/sentience-tokenize/branch/main/graph/badge.svg)](https://codecov.io/gh/nbursa/sentience-tokenize)
 
 ---
+
+## Quick start
+
+Install:
+
+```toml
+[dependencies]
+sentience-tokenize = "0.2.0"
+```
+
+Basic usage:
+
+```rust
+use sentience_tokenize::tokenize;
+
+fn main() {
+    let toks = tokenize("let x = 1").unwrap();
+    for t in toks { println!("{:?} @{}..{}", t.kind, t.span.start, t.span.end); }
+}
+```
+
+Streaming iterator (no allocation of full token vec):
+
+```rust
+use sentience_tokenize::tokenize_iter;
+
+for item in tokenize_iter("let x = 1") {
+    let t = item.unwrap();
+    println!("{:?} @{}..{}", t.kind, t.span.start, t.span.end);
+}
+```
+
+Zero-copy tokens (borrow `&str` slices from the source):
+
+```rust
+use sentience_tokenize::{tokenize_borrowed, BorrowedTokenKind};
+
+let toks = tokenize_borrowed("\"hi\" 123").unwrap();
+assert!(matches!(toks[0].kind, BorrowedTokenKind::String("hi")));
+assert!(matches!(toks[1].kind, BorrowedTokenKind::Number("123")));
+```
 
 ## Features
 
