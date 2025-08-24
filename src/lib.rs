@@ -36,6 +36,48 @@ mod iter;
 /// Iterator-based API over tokens. Yields `Result<Token, LexError>`.
 pub use iter::{tokenize_iter, Tokens};
 
+/// Zero-copy token kind borrowing slices from the source.
+/// Note: `String(&str)` contains the *literal contents between quotes* without unquoting; escapes (e.g. `\n`) are left as two characters.
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BorrowedTokenKind<'a> {
+    Ident(&'a str),
+    Number(&'a str),
+    String(&'a str),
+    True,
+    False,
+    If,
+    Then,
+    Else,
+    Let,
+    Rule,
+    And,
+    Or,
+    LParen,
+    RParen,
+    LBrace,
+    RBrace,
+    LBracket,
+    RBracket,
+    Comma,
+    Colon,
+    Semicolon,
+    Arrow,
+    Eq,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+}
+
+/// A zero-copy token with its [`BorrowedTokenKind`] and [`Span`].
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BorrowedToken<'a> {
+    pub kind: BorrowedTokenKind<'a>,
+    pub span: Span,
+}
+
 /// Token kind for the DSL. Variant set is stable across minor releases; new variants may be added in minor versions.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "type", content = "value"))]
@@ -230,6 +272,231 @@ impl<'a> Lexer<'a> {
         })
     }
 
+    fn lex_number_borrowed(&mut self, start: usize) -> Result<BorrowedToken<'a>, LexError> {
+        let mut seen_dot = false;
+        let mut seen_exp = false;
+        let mut last_was_dot = false;
+        self.bump(); // consume first digit
+
+        while let Some((idx, ch)) = self.peek() {
+            if ch.is_ascii_digit() {
+                self.bump();
+                last_was_dot = false;
+            } else if ch == '.' {
+                if seen_dot {
+                    if last_was_dot {
+                        break;
+                    }
+                    return Err(LexError::new(
+                        LexErrorKind::InvalidNumber,
+                        Span {
+                            start,
+                            end: idx + ch.len_utf8(),
+                        },
+                    ));
+                }
+                let mut clone = self.it.clone();
+                if let Some((_, next)) = clone.next() {
+                    if next == '.' {
+                        break;
+                    }
+                    if !next.is_ascii_digit() {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+                seen_dot = true;
+                last_was_dot = true;
+                self.bump();
+            } else if (ch == 'e' || ch == 'E') && !seen_exp {
+                seen_exp = true;
+                last_was_dot = false;
+                self.bump();
+                if let Some((_, sign)) = self.peek() {
+                    if sign == '+' || sign == '-' {
+                        self.bump();
+                    }
+                }
+                match self.peek() {
+                    Some((_, d)) if d.is_ascii_digit() => {}
+                    _ => {
+                        return Err(LexError::new(
+                            LexErrorKind::InvalidNumber,
+                            Span {
+                                start,
+                                end: idx + ch.len_utf8(),
+                            },
+                        ))
+                    }
+                }
+            } else {
+                break;
+            }
+        }
+
+        let end = self.peek().map(|(j, _)| j).unwrap_or(self.src.len());
+        Ok(BorrowedToken {
+            kind: BorrowedTokenKind::Number(&self.src[start..end]),
+            span: Span { start, end },
+        })
+    }
+
+    /// Return next borrowed token or error without allocations. Strings validate escapes but keep them as-is in the slice.
+    fn next_token_borrowed(&mut self) -> Option<Result<BorrowedToken<'a>, LexError>> {
+        self.skip_ws_and_comments();
+        let (i, c) = self.peek()?;
+
+        // Strings: validate and borrow the raw contents between quotes
+        if c == '"' {
+            let start = i; // points at opening quote
+            self.bump();
+            let content_start = start + 1;
+            loop {
+                let Some((j, ch)) = self.bump() else {
+                    return Some(Err(LexError::new(
+                        LexErrorKind::UnterminatedString,
+                        Span {
+                            start,
+                            end: self.src.len(),
+                        },
+                    )));
+                };
+                match ch {
+                    '\\' => {
+                        // require a following valid escape char, but do not build the string
+                        let Some((k, esc)) = self.bump() else {
+                            return Some(Err(LexError::new(
+                                LexErrorKind::UnterminatedEscape,
+                                Span {
+                                    start: j,
+                                    end: j + 1,
+                                },
+                            )));
+                        };
+                        match esc {
+                            'n' | 't' | 'r' | '"' | '\\' => {
+                                let _ = k;
+                            }
+                            _ => {
+                                let escape_end = k + esc.len_utf8();
+                                return Some(Err(LexError::new(
+                                    LexErrorKind::InvalidEscape,
+                                    Span {
+                                        start: j,
+                                        end: escape_end,
+                                    },
+                                )));
+                            }
+                        }
+                    }
+                    '"' => {
+                        let end = j + 1; // closing quote included in token span
+                        return Some(Ok(BorrowedToken {
+                            kind: BorrowedTokenKind::String(&self.src[content_start..j]),
+                            span: Span { start, end },
+                        }));
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        // Numbers
+        if c.is_ascii_digit() {
+            match self.lex_number_borrowed(i) {
+                Ok(tok) => return Some(Ok(tok)),
+                Err(e) => return Some(Err(e)),
+            }
+        }
+
+        // Idents / keywords
+        if c.is_ascii_alphabetic() || c == '_' {
+            let start = i;
+            self.bump();
+            while let Some((_, p)) = self.peek() {
+                if p.is_ascii_alphanumeric() || p == '_' {
+                    self.bump();
+                } else {
+                    break;
+                }
+            }
+            let end = self.peek().map(|(j, _)| j).unwrap_or(self.src.len());
+            let kind = match &self.src[start..end] {
+                "true" => BorrowedTokenKind::True,
+                "false" => BorrowedTokenKind::False,
+                "if" => BorrowedTokenKind::If,
+                "then" => BorrowedTokenKind::Then,
+                "else" => BorrowedTokenKind::Else,
+                "let" => BorrowedTokenKind::Let,
+                "rule" => BorrowedTokenKind::Rule,
+                "and" => BorrowedTokenKind::And,
+                "or" => BorrowedTokenKind::Or,
+                s => BorrowedTokenKind::Ident(s),
+            };
+            return Some(Ok(BorrowedToken {
+                kind,
+                span: Span { start, end },
+            }));
+        }
+
+        // Arrow / minus
+        if c == '-' {
+            let start = i;
+            self.bump();
+            if let Some((j, '>')) = self.peek() {
+                self.bump();
+                return Some(Ok(BorrowedToken {
+                    kind: BorrowedTokenKind::Arrow,
+                    span: Span { start, end: j + 1 },
+                }));
+            } else {
+                return Some(Ok(BorrowedToken {
+                    kind: BorrowedTokenKind::Minus,
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
+                }));
+            }
+        }
+
+        // Singles / error
+        let start = i;
+        self.bump();
+        let tk = match c {
+            '(' => BorrowedTokenKind::LParen,
+            ')' => BorrowedTokenKind::RParen,
+            '{' => BorrowedTokenKind::LBrace,
+            '}' => BorrowedTokenKind::RBrace,
+            '[' => BorrowedTokenKind::LBracket,
+            ']' => BorrowedTokenKind::RBracket,
+            ',' => BorrowedTokenKind::Comma,
+            ':' => BorrowedTokenKind::Colon,
+            ';' => BorrowedTokenKind::Semicolon,
+            '=' => BorrowedTokenKind::Eq,
+            '+' => BorrowedTokenKind::Plus,
+            '*' => BorrowedTokenKind::Star,
+            '/' => BorrowedTokenKind::Slash,
+            other => {
+                return Some(Err(LexError::new(
+                    LexErrorKind::UnexpectedChar,
+                    Span {
+                        start,
+                        end: start + other.len_utf8(),
+                    },
+                )));
+            }
+        };
+        Some(Ok(BorrowedToken {
+            kind: tk,
+            span: Span {
+                start,
+                end: start + 1,
+            },
+        }))
+    }
+
     /// Return next token or error without buffering the entire input.
     /// `None` means end.
     #[inline]
@@ -394,6 +661,20 @@ impl<'a> Lexer<'a> {
 /// Errors include unterminated strings/escapes, invalid escapes, invalid numbers, and unexpected characters.
 pub fn tokenize(src: &str) -> Result<Vec<Token>, LexError> {
     Lexer::new(src).tokenize()
+}
+
+/// Tokenize the entire input returning zero-copy tokens that borrow from `src`.
+/// Strings are validated (including escapes) but their contents are *not* unescaped; the returned `&str` is the raw slice between quotes.
+pub fn tokenize_borrowed(src: &str) -> Result<Vec<BorrowedToken<'_>>, LexError> {
+    let mut lx = Lexer::new(src);
+    let mut out = Vec::new();
+    while let Some(res) = lx.next_token_borrowed() {
+        match res {
+            Ok(t) => out.push(t),
+            Err(e) => return Err(e),
+        }
+    }
+    Ok(out)
 }
 
 #[cfg(test)]
@@ -648,5 +929,22 @@ mod tests {
         let json = serde_json::to_string(&toks).unwrap();
         let back: Vec<Token> = serde_json::from_str(&json).unwrap();
         assert_eq!(toks, back);
+    }
+
+    #[test]
+    fn borrowed_basic_no_escapes() {
+        let toks = tokenize_borrowed("let x = \"hi\" 123").unwrap();
+        use BorrowedTokenKind as K;
+        assert!(matches!(toks[0].kind, K::Let));
+        assert!(matches!(toks[1].kind, K::Ident("x")));
+        assert!(matches!(toks[3].kind, K::String("hi")));
+        assert!(matches!(toks[4].kind, K::Number("123")));
+    }
+
+    #[test]
+    fn borrowed_string_keeps_escapes() {
+        let toks = tokenize_borrowed("\"a\\n\"").unwrap();
+        use BorrowedTokenKind as K;
+        assert!(matches!(toks[0].kind, K::String("a\\n")));
     }
 }
