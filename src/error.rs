@@ -1,6 +1,7 @@
 use crate::Span;
 use std::fmt;
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LexErrorKind {
     UnexpectedChar,
@@ -10,6 +11,7 @@ pub enum LexErrorKind {
     InvalidEscape,
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LexError {
     pub kind: LexErrorKind,

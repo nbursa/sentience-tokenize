@@ -37,6 +37,8 @@ mod iter;
 pub use iter::{tokenize_iter, Tokens};
 
 /// Token kind for the DSL. Variant set is stable across minor releases; new variants may be added in minor versions.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(tag = "type", content = "value"))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenKind {
     Ident(String),
@@ -69,6 +71,7 @@ pub enum TokenKind {
 }
 
 /// Byte span `[start, end)` into the original source.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Span {
     pub start: usize,
@@ -76,6 +79,7 @@ pub struct Span {
 }
 
 /// A token with its [`TokenKind`] and [`Span`].
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token {
     pub kind: TokenKind,
@@ -635,5 +639,14 @@ mod tests {
                 "Ident(x)"
             ]
         );
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn serde_round_trip_token() {
+        let toks = tokenize("let x = 1").unwrap();
+        let json = serde_json::to_string(&toks).unwrap();
+        let back: Vec<Token> = serde_json::from_str(&json).unwrap();
+        assert_eq!(toks, back);
     }
 }
