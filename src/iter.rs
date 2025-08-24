@@ -13,6 +13,8 @@ enum TokensInner<'a> {
     Done,
 }
 
+/// Streaming tokenizer over `&str`. Yields `Result<Token, LexError>` items.
+/// Terminates iteration after the first error.
 pub fn tokenize_iter(src: &str) -> Tokens<'_> {
     Tokens {
         inner: TokensInner::Lex(Lexer::new(src)),
