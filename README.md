@@ -55,6 +55,8 @@ assert!(matches!(toks[0].kind, BorrowedTokenKind::String("hi")));
 assert!(matches!(toks[1].kind, BorrowedTokenKind::Number("123")));
 ```
 
+---
+
 ## Features
 
 - **Zero dependencies** (only std).
