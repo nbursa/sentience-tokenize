@@ -248,10 +248,15 @@ impl<'a> Lexer<'a> {
                     };
                     match ch {
                         '\\' => {
-                            let Some((_, esc)) = self.bump() else {
+                            // Backslash inside a string; the next character determines the escape.
+                            let Some((k, esc)) = self.bump() else {
+                                // Backslash at position `j` with no following character.
                                 return Err(LexError::new(
                                     LexErrorKind::UnterminatedEscape,
-                                    Span { start, end: j + 1 },
+                                    Span {
+                                        start: j,
+                                        end: j + 1,
+                                    },
                                 ));
                             };
                             let ch = match esc {
@@ -261,12 +266,13 @@ impl<'a> Lexer<'a> {
                                 '"' => '"',
                                 '\\' => '\\',
                                 _ => {
-                                    // invalid escape
+                                    // Report a precise span covering just the escape sequence `\\X`.
+                                    let escape_end = k + esc.len_utf8();
                                     return Err(LexError::new(
                                         LexErrorKind::InvalidEscape,
                                         Span {
-                                            start,
-                                            end: self.src.len(),
+                                            start: j,
+                                            end: escape_end,
                                         },
                                     ));
                                 }
@@ -520,6 +526,16 @@ mod tests {
         // complex escapes: quote, backslash, tab -> resulting string is "\t
         let toks = tokenize("\"\\\"\\\\\t\"").unwrap();
         assert!(matches!(toks[0].kind, TokenKind::String(ref s) if s == "\"\\\t"));
+    }
+
+    #[test]
+    fn invalid_escape_span_is_precise() {
+        // src contents: \"abc\\x\"
+        let src = "\"abc\\x\"";
+        let err = tokenize(src).unwrap_err();
+        assert!(matches!(err.kind, LexErrorKind::InvalidEscape));
+        // backslash at idx 4, 'x' at idx 5 -> span 4..6
+        assert_eq!(err.span, Span { start: 4, end: 6 });
     }
 
     #[test]
