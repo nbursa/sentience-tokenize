@@ -11,7 +11,7 @@ Designed for speed, clarity, and easy embedding.
 [![Build Status](https://img.shields.io/github/actions/workflow/status/nbursa/sentience-tokenize/ci.yml?branch=main)](https://github.com/nbursa/sentience-tokenize/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/nbursa/sentience-tokenize/blob/main/LICENSE)
 [![codecov](https://codecov.io/gh/nbursa/sentience-tokenize/branch/main/graph/badge.svg)](https://codecov.io/gh/nbursa/sentience-tokenize)
-[![Parser Tooling](https://lib.rs/rust/parser-tooling.svg)](https://lib.rs/crates/sentience-tokenize)
+[![Parser Tooling](https://img.shields.io/badge/lib.rs%20rank-%2336%20Parser%20Tooling-purple)](https://lib.rs/crates/sentience-tokenize)
 
 ---
 
