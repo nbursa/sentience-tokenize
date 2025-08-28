@@ -8,6 +8,7 @@ Designed for speed, clarity, and easy embedding.
 
 [![Crates.io](https://img.shields.io/crates/v/sentience-tokenize.svg)](https://crates.io/crates/sentience-tokenize)
 [![Parser Tooling](https://img.shields.io/badge/lib.rs%20rank-%2336%20Parser%20Tooling-purple)](https://lib.rs/crates/sentience-tokenize)
+[![Crates.io](https://img.shields.io/crates/d/sentience-tokenize.svg)](https://crates.io/crates/sentience-tokenize)
 [![Docs.rs](https://img.shields.io/docsrs/sentience-tokenize)](https://docs.rs/sentience-tokenize)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/nbursa/sentience-tokenize/ci.yml?branch=main)](https://github.com/nbursa/sentience-tokenize/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/nbursa/sentience-tokenize/blob/main/LICENSE)
