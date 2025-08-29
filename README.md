@@ -22,7 +22,7 @@ Install:
 
 ```toml
 [dependencies]
-sentience-tokenize = "0.2.2"
+sentience-tokenize = "0.2.3"
 ```
 
 Basic usage:
@@ -156,7 +156,7 @@ Add to `Cargo.toml`:
 
 ```toml
 [dependencies]
-sentience-tokenize = "0.2.2"
+sentience-tokenize = "0.2.3"
 ```
 
 ## Example
