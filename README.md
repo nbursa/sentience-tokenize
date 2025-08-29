@@ -156,7 +156,7 @@ Add to `Cargo.toml`:
 
 ```toml
 [dependencies]
-sentience-tokenize = "0.2.0"
+sentience-tokenize = "0.2.2"
 ```
 
 ## Example
