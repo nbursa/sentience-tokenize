@@ -22,7 +22,7 @@ Install:
 
 ```toml
 [dependencies]
-sentience-tokenize = "0.2.0"
+sentience-tokenize = "0.2.1"
 ```
 
 Basic usage:
@@ -62,7 +62,7 @@ assert!(matches!(toks[1].kind, BorrowedTokenKind::Number("123")));
 ## Features
 
 - **Zero dependencies** (only std).
-- **Token kinds**: identifiers, numbers, strings, parens/brackets/braces, `= + - * / ->`.
+- **Token kinds**: identifiers, numbers, strings, parens/brackets/braces, `= + - * / ->`, `. .. @`.
 - **Keywords**: `true false if then else let rule and or`.
 - **Spans** included for each token.
 - **Iterator API**: `tokenize_iter` yields `Result<Token, LexError>`.
@@ -87,7 +87,7 @@ assert!(matches!(toks[1].kind, BorrowedTokenKind::Number("123")));
 | Strings      | Double-quoted. Escapes: `\n`, `\t`, `\r`, `\"`, `\\`. Unknown escapes = error. Raw newlines are accepted. |
 | Comments     | `//` to end-of-line. |
 | Delimiters   | `(` `)` `{` `}` `[` `]` `,` `:` `;` |
-| Operators    | `=`, `+`, `-`, `*`, `/`, `->` |
+| Operators    | `=`, `+`, `-`, `*`, `/`, `->`, `.`, `..`, `@` |
 | Keywords     | `true`, `false`, `if`, `then`, `else`, `let`, `rule`, `and`, `or` |
 
 The enum `TokenKind`, types `Token`/`Span`, functions `tokenize`/`tokenize_iter`, `LineMap`, and error types `LexError{Kind}` are part of the **stable API**.

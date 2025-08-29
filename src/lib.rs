@@ -68,6 +68,9 @@ pub enum BorrowedTokenKind<'a> {
     Minus,
     Star,
     Slash,
+    Dot,
+    DoubleDot,
+    At,
 }
 
 /// A zero-copy token with its [`BorrowedTokenKind`] and [`Span`].
@@ -110,6 +113,9 @@ pub enum TokenKind {
     Minus,
     Star,
     Slash,
+    Dot,
+    DoubleDot,
+    At,
 }
 
 /// Byte span `[start, end)` into the original source.
@@ -402,6 +408,27 @@ impl<'a> Lexer<'a> {
             }
         }
 
+        // Double dot (must come before numbers to handle 1..2 correctly)
+        if c == '.' {
+            let start = i;
+            self.bump();
+            if let Some((j, '.')) = self.peek() {
+                self.bump();
+                return Some(Ok(BorrowedToken {
+                    kind: BorrowedTokenKind::DoubleDot,
+                    span: Span { start, end: j + 1 },
+                }));
+            } else {
+                return Some(Ok(BorrowedToken {
+                    kind: BorrowedTokenKind::Dot,
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
+                }));
+            }
+        }
+
         // Numbers
         if c.is_ascii_digit() {
             match self.lex_number_borrowed(i) {
@@ -478,6 +505,7 @@ impl<'a> Lexer<'a> {
             '+' => BorrowedTokenKind::Plus,
             '*' => BorrowedTokenKind::Star,
             '/' => BorrowedTokenKind::Slash,
+            '@' => BorrowedTokenKind::At,
             other => {
                 return Some(Err(LexError::new(
                     LexErrorKind::UnexpectedChar,
@@ -561,6 +589,27 @@ impl<'a> Lexer<'a> {
             }
         }
 
+        // Double dot (must come before numbers to handle 1..2 correctly)
+        if c == '.' {
+            let start = i;
+            self.bump();
+            if let Some((j, '.')) = self.peek() {
+                self.bump();
+                return Some(Ok(Token {
+                    kind: TokenKind::DoubleDot,
+                    span: Span { start, end: j + 1 },
+                }));
+            } else {
+                return Some(Ok(Token {
+                    kind: TokenKind::Dot,
+                    span: Span {
+                        start,
+                        end: start + 1,
+                    },
+                }));
+            }
+        }
+
         // Numbers
         if c.is_ascii_digit() {
             match self.lex_number(i) {
@@ -626,6 +675,7 @@ impl<'a> Lexer<'a> {
             '+' => TokenKind::Plus,
             '*' => TokenKind::Star,
             '/' => TokenKind::Slash,
+            '@' => TokenKind::At,
             other => {
                 return Some(Err(LexError::new(
                     LexErrorKind::UnexpectedChar,
@@ -731,9 +781,11 @@ mod tests {
         let err = tokenize("123.45.6").expect_err("second dot should be invalid unless range");
         assert!(matches!(err.kind, LexErrorKind::InvalidNumber));
 
-        // but range `1..2` must remain split (we already check UnexpectedChar for the dot itself)
-        let err = tokenize("1..2").expect_err("range dot should not be consumed by number");
-        assert!(matches!(err.kind, LexErrorKind::UnexpectedChar));
+        // range `1..2` should be tokenized as separate tokens
+        let toks = tokenize("1..2").unwrap();
+        assert!(matches!(toks[0].kind, TokenKind::Number(ref s) if s == "1"));
+        assert!(matches!(toks[1].kind, TokenKind::DoubleDot));
+        assert!(matches!(toks[2].kind, TokenKind::Number(ref s) if s == "2"));
     }
 
     #[test]
@@ -771,6 +823,15 @@ mod tests {
     }
 
     #[test]
+    fn new_token_types_owned() {
+        use TokenKind as K;
+        let toks = tokenize("a.b ..c @d").unwrap();
+        assert!(matches!(toks[1].kind, K::Dot));
+        assert!(matches!(toks[3].kind, K::DoubleDot));
+        assert!(matches!(toks[5].kind, K::At));
+    }
+
+    #[test]
     fn numbers_and_ranges() {
         // valid decimals and exponents
         let toks = tokenize("1 1.0 1.2e-3").unwrap();
@@ -785,8 +846,10 @@ mod tests {
             .any(|t| matches!(t.kind, TokenKind::Number(ref s) if s == "1.2e-3")));
 
         // ensure don't swallow `..` as part of a number
-        let err = tokenize("1..2").expect_err("should error on unexpected '.'");
-        assert!(matches!(err.kind, LexErrorKind::UnexpectedChar));
+        let toks = tokenize("1..2").unwrap();
+        assert!(matches!(toks[0].kind, TokenKind::Number(ref s) if s == "1"));
+        assert!(matches!(toks[1].kind, TokenKind::DoubleDot));
+        assert!(matches!(toks[2].kind, TokenKind::Number(ref s) if s == "2"));
     }
 
     #[test]
@@ -802,8 +865,18 @@ mod tests {
 
     #[test]
     fn numbers_trailing_dot_is_error() {
-        let err = tokenize("0.").expect_err("trailing dot should error");
-        assert!(matches!(err.kind, LexErrorKind::UnexpectedChar));
+        let toks = tokenize("0.").unwrap();
+        assert!(matches!(toks[0].kind, TokenKind::Number(ref s) if s == "0"));
+        assert!(matches!(toks[1].kind, TokenKind::Dot));
+    }
+
+    #[test]
+    fn dot_tokens_work() {
+        let toks = tokenize("a.b ..c d.e").unwrap();
+        use TokenKind as K;
+        assert!(matches!(toks[1].kind, K::Dot));
+        assert!(matches!(toks[3].kind, K::DoubleDot));
+        assert!(matches!(toks[6].kind, K::Dot));
     }
 
     #[test]
@@ -879,7 +952,7 @@ mod tests {
 
     #[test]
     fn unknown_char_errors_with_span() {
-        let err = tokenize("a @ b").expect_err("unknown char '@'");
+        let err = tokenize("a # b").expect_err("unknown char '#'");
         assert!(matches!(err.kind, LexErrorKind::UnexpectedChar));
         assert!(err.span.start < err.span.end);
     }
@@ -1059,8 +1132,26 @@ mod tests {
 
     #[test]
     fn borrowed_unexpected_char_error() {
-        let err = tokenize_borrowed("a @ b").expect_err("unexpected '@'");
+        let err = tokenize_borrowed("a # b").expect_err("unexpected '#'");
         assert!(matches!(err.kind, LexErrorKind::UnexpectedChar));
         assert!(err.span.start < err.span.end);
+    }
+
+    #[test]
+    fn new_token_types() {
+        use BorrowedTokenKind as K;
+        let toks = tokenize_borrowed("a.b ..c @d").unwrap();
+        assert!(matches!(toks[1].kind, K::Dot));
+        assert!(matches!(toks[3].kind, K::DoubleDot));
+        assert!(matches!(toks[5].kind, K::At));
+    }
+
+    #[test]
+    fn dot_vs_double_dot() {
+        use BorrowedTokenKind as K;
+        let toks = tokenize_borrowed("a.b ..c d.e").unwrap();
+        assert!(matches!(toks[1].kind, K::Dot));
+        assert!(matches!(toks[3].kind, K::DoubleDot));
+        assert!(matches!(toks[6].kind, K::Dot));
     }
 }
