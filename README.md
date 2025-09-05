@@ -13,7 +13,10 @@ Designed for speed, clarity, and easy embedding.
 [![Docs.rs](https://img.shields.io/docsrs/sentience-tokenize)](https://docs.rs/sentience-tokenize)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/nbursa/sentience-tokenize/ci.yml?branch=main)](https://github.com/nbursa/sentience-tokenize/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/nbursa/sentience-tokenize/blob/main/LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/nbursa/sentience-tokenize?style=social)](https://github.com/nbursa/sentience-tokenize)
 
+> Currently ranked **#36 in Parser Tooling** on lib.rs ⭐ If you find this useful, it helps visibility and adoption!
+ 
 ---
 
 ## Quick start
