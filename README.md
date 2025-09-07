@@ -7,7 +7,7 @@ Clear spans, a streaming iterator, and a **zero‑copy** mode when you want pure
 Designed for speed, clarity, and easy embedding.
 
 [![Crates.io](https://img.shields.io/crates/v/sentience-tokenize.svg)](https://crates.io/crates/sentience-tokenize)
-[![Parser Tooling](https://img.shields.io/badge/lib.rs%20rank-%2336%20Parser%20Tooling-purple)](https://lib.rs/crates/sentience-tokenize)
+[![Parser Tooling](https://img.shields.io/badge/lib.rs%20rank-%2335%20Parser%20Tooling-purple)](https://lib.rs/crates/sentience-tokenize)
 [![Crates.io](https://img.shields.io/crates/d/sentience-tokenize.svg)](https://crates.io/crates/sentience-tokenize)
 [![codecov](https://codecov.io/gh/nbursa/sentience-tokenize/branch/main/graph/badge.svg)](https://codecov.io/gh/nbursa/sentience-tokenize)
 [![Docs.rs](https://img.shields.io/docsrs/sentience-tokenize)](https://docs.rs/sentience-tokenize)
@@ -15,7 +15,7 @@ Designed for speed, clarity, and easy embedding.
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/nbursa/sentience-tokenize/blob/main/LICENSE)
 [![GitHub Stars](https://img.shields.io/github/stars/nbursa/sentience-tokenize?style=social)](https://github.com/nbursa/sentience-tokenize)
 
-> Currently ranked **#36 in Parser Tooling** on lib.rs ⭐ If you find this useful, it helps visibility and adoption!
+> Currently ranked **#35 in Parser Tooling** on lib.rs ⭐ If you find this useful, it helps visibility and adoption!
  
 ---
 
