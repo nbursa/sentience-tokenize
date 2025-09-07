@@ -7,8 +7,9 @@ Clear spans, a streaming iterator, and a **zero‑copy** mode when you want pure
 Designed for speed, clarity, and easy embedding.
 
 [![Crates.io](https://img.shields.io/crates/v/sentience-tokenize.svg)](https://crates.io/crates/sentience-tokenize)
-[![Parser Tooling](https://img.shields.io/badge/lib.rs%20rank-%2335%20Parser%20Tooling-purple)](https://lib.rs/crates/sentience-tokenize)
+[![Size](https://img.shields.io/badge/size-53KB-informational)](https://lib.rs/crates/sentience-tokenize)
 [![Crates.io](https://img.shields.io/crates/d/sentience-tokenize.svg)](https://crates.io/crates/sentience-tokenize)
+[![Parser Tooling](https://img.shields.io/badge/lib.rs%20rank-%2335%20Parser%20Tooling-purple)](https://lib.rs/crates/sentience-tokenize)
 [![codecov](https://codecov.io/gh/nbursa/sentience-tokenize/branch/main/graph/badge.svg)](https://codecov.io/gh/nbursa/sentience-tokenize)
 [![Docs.rs](https://img.shields.io/docsrs/sentience-tokenize)](https://docs.rs/sentience-tokenize)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/nbursa/sentience-tokenize/ci.yml?branch=main)](https://github.com/nbursa/sentience-tokenize/actions)
